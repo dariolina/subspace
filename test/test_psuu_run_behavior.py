@@ -3,7 +3,7 @@ import pytest as pt
 
 from subspace_model.experiments.experiment import psuu
 from subspace_model.psuu import timestep_tensor_to_trajectory_tensor
-from subspace_model.const import MAX_CREDIT_ISSUANCE
+from subspace_model.const import MAX_CREDIT_ISSUANCE, ISSUANCE_FOR_FARMERS
 
 @pt.fixture(scope="module", params=[(100, 50, 1), (1000, 2, 1)])
 def sim_df(request) -> pd.DataFrame:
@@ -53,16 +53,16 @@ def test_kpi_values(sim_df):
 def test_state_variables(sim_df):
     for i_traj, df in sim_df.groupby(['simulation', 'subset', 'run']):
         for i_row, row in df.iterrows():
-            assert row['allocated_tokens'] == pt.approx(row['allocated_tokens_investors']
+            assert row['allocated_tokens'] == pt.approx(MAX_CREDIT_ISSUANCE - ISSUANCE_FOR_FARMERS - 
+                                                        (row['allocated_tokens_investors']
                                                         + row['allocated_tokens_founders']
                                                         + row['allocated_tokens_team']
                                                         + row['allocated_tokens_advisors']
                                                         + row['allocated_tokens_vendors']
                                                         + row['allocated_tokens_ambassadors']
-                                                        + row['allocated_tokens_testnets']
-                                                        + row['allocated_tokens_foundation']
+                                                        + (row['allocated_tokens_foundation'] - 0.07 * MAX_CREDIT_ISSUANCE)
                                                         + row['allocated_tokens_ssl_priv_sale']
-                                                        + row['allocated_tokens_subspace_labs'])
+                                                        + (row['allocated_tokens_subspace_labs'] - 0.02 * MAX_CREDIT_ISSUANCE)))
             
             assert row['sum_of_stocks'] == pt.approx(MAX_CREDIT_ISSUANCE)
             assert row['circulating_supply'] <= row['sum_of_stocks']

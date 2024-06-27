@@ -20,6 +20,9 @@ from subspace_model.experiments.charts import (  # mc_total_supply,
 )
 from subspace_model.experiments.experiment import (
     sanity_check_run,
+    sweep_credit_supply,
+    initial_conditions,
+    standard_stochastic_run,
     psuu,
 )
 from subspace_model.experiments.metrics import (
@@ -39,6 +42,9 @@ log_levels = {
 
 experiments = {
     "sanity_check_run": sanity_check_run,
+    "sweep_credit_supply": sweep_credit_supply,
+    "initial_conditions": initial_conditions,
+    "standard_stochastic_run": standard_stochastic_run,
     "psuu": psuu,
 }
 

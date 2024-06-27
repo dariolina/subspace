@@ -53,7 +53,7 @@ from bokeh.palettes import Turbo256, Category20
 
 # %% papermill={"duration": 0.019539, "end_time": "2024-01-31T00:37:21.430033", "exception": false, "start_time": "2024-01-31T00:37:21.410494", "status": "completed"}
 sim_df = pd.read_pickle(
-    "../data/simulations/initial_conditions-2024-01-04_11-38-47.pkl.gz"
+    "../../data/simulations/initial_conditions-2024-06-24_22-33-45.pkl.gz"
 ).drop(['timestep', 'simulation', 'subset', 'timestep_in_days', 'block_time_in_seconds', 'delta_days', 'delta_blocks'], axis=1)
 
 # %% papermill={"duration": 0.026983, "end_time": "2024-01-31T00:37:21.461524", "exception": false, "start_time": "2024-01-31T00:37:21.434541", "status": "completed"}
@@ -183,7 +183,7 @@ fan_chart_quantile(sim_df, column='circulating_supply', median_only=False)
 # System Balances
 
 # %% papermill={"duration": 0.014674, "end_time": "2024-01-31T00:37:21.887251", "exception": false, "start_time": "2024-01-31T00:37:21.872577", "status": "completed"}
-system_balances = ['other_issuance_balance', 'reward_issuance_balance']
+system_balances = ['vesting_balance', 'reward_issuance_balance']
 
 # %% papermill={"duration": 0.275799, "end_time": "2024-01-31T00:37:22.168260", "exception": false, "start_time": "2024-01-31T00:37:21.892461", "status": "completed"}
 hover = HoverTool(

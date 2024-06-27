@@ -14,6 +14,7 @@ from subspace_model.metrics import (
     earned_supply,
     issued_supply,
     total_supply,
+    circulating_supply
 )
 from subspace_model.types import (
     StochasticFunction,
@@ -24,7 +25,7 @@ from subspace_model.types import (
 
 
 def DEFAULT_SLASH_FUNCTION(params: SubspaceModelParams, state: SubspaceModelState):
-    return state["staking_pool_balance"] * 0.001  # HACK
+    return state["staking_pool_balance"] * 0  # HACK
 
 
 def NORMAL_GENERATOR(mu: float, sigma: float) -> StochasticFunction:
@@ -142,6 +143,8 @@ SUPPLY_EARNED = earned_supply
 
 SUPPLY_EARNED_MINUS_BURNED = earned_minus_burned_supply
 
+CIRCULATING_SUPPLY = circulating_supply
+
 SUPPLY_TOTAL = total_supply
 
 
@@ -158,29 +161,27 @@ REFERENCE_SUBSIDY_HYBRID_TWO_COMPONENTS = [
         6 * BLOCKS_PER_MONTH, 7 * BLOCKS_PER_MONTH, 5_000, 1_000 / BLOCKS_PER_MONTH
     ),
 ]
-
+REFERENCE_SUBSIDY_MAINNET_TWO_COMPONENTS = [
+    SubsidyComponent(7, 0, 0.5 * ISSUANCE_FOR_FARMERS, 0.25),
+    SubsidyComponent(
+        7, 365.25*2, 0.5 * ISSUANCE_FOR_FARMERS, 0.25),
+]
 
 def MAINNET_REFERENCE_SUBSIDY_COMPONENTS():
-    component_1_start_days = [0, 14, 30]
-    component_2_start_days = [0, 14, 30]
+    component_1_start_days = [7]
+    component_2_start_days = [7]
 
     component_1_initial_subsidy_duration = [0]
-    component_1_initial_subsidies = [1, 4, 7]
+    component_1_initial_subsidies = [2.5]
     component_1_maximum_cumulative_subsidies = [
-        0.1 * ISSUANCE_FOR_FARMERS,
-        0.3 * ISSUANCE_FOR_FARMERS,
         0.5 * ISSUANCE_FOR_FARMERS]
 
     component_2_initial_subsidy_duration = [
-        6 * (365.25 / 12),
-        12 * (365.25 / 12),
         24 * (365.25 / 12),
-        48 * (365.25 / 12),
     ]
-    component_2_initial_subsidies = [1, 4, 7]
-    component_2_maximum_cumulative_subsidies = [0.1 * ISSUANCE_FOR_FARMERS,
-                                                0.3 * ISSUANCE_FOR_FARMERS,
-                                                0.5 * ISSUANCE_FOR_FARMERS]
+    component_2_initial_subsidies = [2.5]
+    component_2_maximum_cumulative_subsidies = [
+                                            0.5 * ISSUANCE_FOR_FARMERS]
 
     cartesian_product = sweep_cartesian_product(
         {
@@ -221,6 +222,7 @@ def MAINNET_REFERENCE_SUBSIDY_COMPONENTS():
         )]
 
     return components
+
 
 
 DEFAULT_REFERENCE_SUBSIDY_COMPONENTS = MAINNET_REFERENCE_SUBSIDY_COMPONENTS()[

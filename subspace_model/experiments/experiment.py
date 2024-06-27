@@ -30,6 +30,7 @@ from subspace_model.experiments.logic import (
     SUPPLY_EARNED,
     SUPPLY_EARNED_MINUS_BURNED,
     SUPPLY_ISSUED,
+    CIRCULATING_SUPPLY,
     TRANSACTION_COUNT_PER_DAY_FUNCTION_CONSTANT_UTILIZATION_50,
     TRANSACTION_COUNT_PER_DAY_FUNCTION_GROWING_UTILIZATION_TWO_YEARS,
 )
@@ -78,7 +79,7 @@ def sanity_check_run(
 
 
 def standard_stochastic_run(
-    SIMULATION_DAYS: int = 183, TIMESTEP_IN_DAYS: int = 1, SAMPLES: int = 5
+    SIMULATION_DAYS: int = 183, TIMESTEP_IN_DAYS: int = 1, SAMPLES: int = 5, **kwargs
 ) -> DataFrame:
     """Function which runs the cadCAD simulations
 
@@ -164,6 +165,7 @@ def sweep_credit_supply(
     SIMULATION_DAYS: int = 183,
     TIMESTEP_IN_DAYS: int = 1,
     SAMPLES: int = 1,
+    **kwargs
 ) -> DataFrame:
     """ """
     TIMESTEPS = int(SIMULATION_DAYS / TIMESTEP_IN_DAYS) + 1
@@ -177,21 +179,21 @@ def sweep_credit_supply(
         TRANSACTION_COUNT_PER_DAY_FUNCTION_CONSTANT_UTILIZATION_50
     )
 
-    param_set_2 = deepcopy(DEFAULT_PARAMS)
-    param_set_2["label"] = "supply-earned"
-    param_set_2["credit_supply_definition"] = SUPPLY_EARNED
-    param_set_2["environmental_label"] = "constant-utilization"
-    param_set_2["transaction_count_per_day_function"] = (
-        TRANSACTION_COUNT_PER_DAY_FUNCTION_CONSTANT_UTILIZATION_50
-    )
+    # param_set_2 = deepcopy(DEFAULT_PARAMS)
+    # param_set_2["label"] = "supply-earned"
+    # param_set_2["credit_supply_definition"] = SUPPLY_EARNED
+    # param_set_2["environmental_label"] = "constant-utilization"
+    # param_set_2["transaction_count_per_day_function"] = (
+    #     TRANSACTION_COUNT_PER_DAY_FUNCTION_CONSTANT_UTILIZATION_50
+    # )
 
-    param_set_3 = deepcopy(DEFAULT_PARAMS)
-    param_set_3["label"] = "supply-earned-minus-burned"
-    param_set_3["credit_supply_definition"] = SUPPLY_EARNED_MINUS_BURNED
-    param_set_3["environmental_label"] = "constant-utilization"
-    param_set_3["transaction_count_per_day_function"] = (
-        TRANSACTION_COUNT_PER_DAY_FUNCTION_CONSTANT_UTILIZATION_50
-    )
+    # param_set_3 = deepcopy(DEFAULT_PARAMS)
+    # param_set_3["label"] = "supply-earned-minus-burned"
+    # param_set_3["credit_supply_definition"] = SUPPLY_EARNED_MINUS_BURNED
+    # param_set_3["environmental_label"] = "constant-utilization"
+    # param_set_3["transaction_count_per_day_function"] = (
+    #     TRANSACTION_COUNT_PER_DAY_FUNCTION_CONSTANT_UTILIZATION_50
+    #)
 
     param_set_4 = deepcopy(DEFAULT_PARAMS)
     param_set_4["label"] = "supply-issued"
@@ -201,29 +203,46 @@ def sweep_credit_supply(
         TRANSACTION_COUNT_PER_DAY_FUNCTION_GROWING_UTILIZATION_TWO_YEARS
     )
 
-    param_set_5 = deepcopy(DEFAULT_PARAMS)
-    param_set_5["label"] = "supply-earned"
-    param_set_5["credit_supply_definition"] = SUPPLY_EARNED
-    param_set_5["environmental_label"] = "growing-utilization"
-    param_set_5["transaction_count_per_day_function"] = (
-        TRANSACTION_COUNT_PER_DAY_FUNCTION_GROWING_UTILIZATION_TWO_YEARS
+    # param_set_5 = deepcopy(DEFAULT_PARAMS)
+    # param_set_5["label"] = "supply-earned"
+    # param_set_5["credit_supply_definition"] = SUPPLY_EARNED
+    # param_set_5["environmental_label"] = "growing-utilization"
+    # param_set_5["transaction_count_per_day_function"] = (
+    #     TRANSACTION_COUNT_PER_DAY_FUNCTION_GROWING_UTILIZATION_TWO_YEARS
+    # )
+
+    # param_set_6 = deepcopy(DEFAULT_PARAMS)
+    # param_set_6["label"] = "supply-earned-minus-burned"
+    # param_set_6["credit_supply_definition"] = SUPPLY_EARNED_MINUS_BURNED
+    # param_set_6["environmental_label"] = "growing-utilization"
+    # param_set_6["transaction_count_per_day_function"] = (
+    #     TRANSACTION_COUNT_PER_DAY_FUNCTION_GROWING_UTILIZATION_TWO_YEARS
+    # )
+    param_set_7 = deepcopy(DEFAULT_PARAMS)
+    param_set_7["label"] = "circulating-supply"
+    param_set_7["credit_supply_definition"] = CIRCULATING_SUPPLY
+    param_set_7["environmental_label"] = "constant-utilization"
+    param_set_7["transaction_count_per_day_function"] = (
+        TRANSACTION_COUNT_PER_DAY_FUNCTION_CONSTANT_UTILIZATION_50
     )
 
-    param_set_6 = deepcopy(DEFAULT_PARAMS)
-    param_set_6["label"] = "supply-earned-minus-burned"
-    param_set_6["credit_supply_definition"] = SUPPLY_EARNED_MINUS_BURNED
-    param_set_6["environmental_label"] = "growing-utilization"
-    param_set_6["transaction_count_per_day_function"] = (
+    param_set_8 = deepcopy(DEFAULT_PARAMS)
+    param_set_8["label"] = "circulating-supply"
+    param_set_8["credit_supply_definition"] = CIRCULATING_SUPPLY
+    param_set_8["environmental_label"] = "growing-utilization"
+    param_set_8["transaction_count_per_day_function"] = (
         TRANSACTION_COUNT_PER_DAY_FUNCTION_GROWING_UTILIZATION_TWO_YEARS
     )
 
     param_sets = [
         param_set_1,
-        param_set_2,
-        param_set_3,
+        #param_set_2,
+        # param_set_3,
         param_set_4,
-        param_set_5,
-        param_set_6,
+        #param_set_5,
+        #param_set_6,
+        param_set_7,
+        param_set_8
     ]
 
     sweep_params: dict[str, list] = {k: [] for k in DEFAULT_PARAMS.keys()}
@@ -252,7 +271,7 @@ def sweep_credit_supply(
 
 
 def initial_conditions(
-    SIMULATION_DAYS: int = 183, TIMESTEP_IN_DAYS: int = 1, SAMPLES: int = 30
+    SIMULATION_DAYS: int = 183, TIMESTEP_IN_DAYS: int = 1, SAMPLES: int = 30, **kwargs
 ) -> DataFrame:
     """Function which runs the cadCAD simulations
 

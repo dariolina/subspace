@@ -41,7 +41,7 @@ def total_supply(state: SubspaceModelState) -> Credits:
 def sum_of_stocks(state: SubspaceModelState) -> Credits:
     return (
         earned_supply(state)
-        + state["other_issuance_balance"]
+        + state["vesting_balance"]
         + state["reward_issuance_balance"]
         + state["burnt_balance"]
     )

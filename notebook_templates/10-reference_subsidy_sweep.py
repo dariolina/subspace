@@ -197,7 +197,7 @@ sim_df.count().to_frame().T.hvplot.bar(y=columns_to_color, color=[column_colors[
 # ### Balances and Supplies
 
 # %% papermill={"duration": 0.028049, "end_time": "2024-01-31T08:17:09.634202", "exception": false, "start_time": "2024-01-31T08:17:09.606153", "status": "completed"}
-system_balances = ['other_issuance_balance', 'reward_issuance_balance']
+system_balances = ['vesting_balance', 'reward_issuance_balance']
 agent_balances = [
     'farmers_balance',
     'operators_balance',

@@ -108,7 +108,7 @@ class SubspaceModelState(TypedDict):
 
     # Stocks
     reward_issuance_balance: Credits
-    other_issuance_balance: Credits
+    vesting_balance: Credits
     operators_balance: Credits
     nominators_balance: Credits
     farmers_balance: Credits
@@ -155,9 +155,9 @@ class SubspaceModelState(TypedDict):
     storage_fee_per_rewards: float
     reference_subsidy: CreditsPerBlock
     compute_fee_multiplier: float
-    free_space: float
+    replication_factor: float
     extrinsic_length_in_bytes: float
-    storage_fee_in_credits_per_bytes: float
+    storage_fee_in_shannon_per_bytes: float
     priority_fee_volume: float
     consensus_extrinsic_fee_volume: float
     max_normal_weight: float

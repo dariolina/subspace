@@ -1,6 +1,7 @@
 from math import floor, isnan
 from typing import Callable
-from cadCAD.types import PolicyOutput  # type: ignore
+from cadCAD.types import PolicyOutput
+import numpy as np  # type: ignore
 from subspace_model.const import *
 from subspace_model.metrics import *
 from subspace_model.types import *
@@ -50,7 +51,6 @@ def add_suf(variable: str, default_value=0.0) -> Callable:
         signal.get(variable, default_value) + state[variable],
     )
 
-
 ## Time Tracking ##
 
 
@@ -78,12 +78,11 @@ def p_reward(
     """
     # Extract necessary values from the state
     S_r = state["reference_subsidy"]
-    F_bar = params["max_block_size"] * \
-        state["storage_fee_in_credits_per_bytes"]
+    F_bar = params["max_block_size"] * state["storage_fee_in_shannon_per_bytes"] * SHANNON_IN_CREDITS
     g = state["block_utilization"]
 
     utilization_based_reward = (S_r - min(S_r, F_bar) * g) * BLOCKS_PER_DAY
-    voting_rewards = S_r * BLOCKS_PER_DAY
+    voting_rewards = S_r * BLOCKS_PER_DAY * (params["reward_recipients"]-1)
     
     total_reward = utilization_based_reward + voting_rewards
 
@@ -91,7 +90,7 @@ def p_reward(
         reward = total_reward
         per_recipient_reward = voting_rewards * (1 / params['reward_recipients'])
         reward_to_proposer = utilization_based_reward + voting_rewards * (1 / params['reward_recipients'])
-        reward_to_voters = reward - reward_to_proposer
+        reward_to_voters = (reward - reward_to_proposer)/ params['reward_recipients']
     else:
         reward = 0.0
         per_recipient_reward = 0.0
@@ -148,16 +147,14 @@ def s_average_compute_weight_per_bundle(
     Simulate the ts-average compute weights per transaction through a Gaussian process.
     XXX: depends on an stochastic process assumption.
     """
+    compute_weight = params["compute_weight_per_bundle_function"](params, state)
+    if np.isnan(compute_weight):
+        compute_weight = params["min_compute_weights_per_bundle"]
     return (
-        "average_compute_weight_per_budle",
-        max(
-            params["compute_weight_per_bundle_function"](
-                params,
-                state,
-            ),
-            params["min_compute_weights_per_bundle"],
-        ),
+        "average_compute_weight_per_bundle",
+        max(compute_weight, params["min_compute_weights_per_bundle"]),
     )
+
 
 def s_bundle_count(
     params: SubspaceModelParams, _2, _3, state: SubspaceModelState, _5
@@ -180,11 +177,7 @@ def p_block_utilization(
     params: SubspaceModelParams, _2, _3, state: SubspaceModelState
 ) -> PolicyOutput:
     block_utilization = params["utilization_ratio_function"](params, state)
-    max_normal_block_length: float = (
-        params["max_block_size"] * DAY_TO_SECONDS *
-        params["block_time_in_seconds"]
-    )
-    transaction_volume = block_utilization * max_normal_block_length * BLOCKS_PER_DAY
+    transaction_volume = block_utilization * params["max_block_size"] * BLOCKS_PER_DAY
     average_transaction_size = state["average_transaction_size"]
     transaction_count = transaction_volume / average_transaction_size
 
@@ -226,9 +219,11 @@ def p_archive(
     if segments_being_archived > 0:
         delta_buffer = SEGMENT_SIZE * segments_being_archived
         new_buffer_bytes += -1 * delta_buffer
-        new_history_bytes += delta_buffer
+        new_history_bytes += 2 * delta_buffer
 
     # Update the blockchain history size and the current buffer size
+    if state["timestep"] < 2:
+        new_history_bytes = params["initial_history_size"]
     return {
         "blockchain_history_size": new_history_bytes,
         "buffer_size": new_buffer_bytes,
@@ -261,12 +256,12 @@ def p_pledge_sectors(
     new_pledge_due_to_requirements: Bytes = max(
         required_space_pledged - total_space_pledged, 0
     )
-
+    new_sectors_pledged_in_bytes = params["new_sectors_per_day_function"](params, state)*SECTOR_SIZE
     # New pledge random parameter function
     new_pledge_due_to_random: Bytes = (
         int(
             max(
-                params["newly_pledged_space_per_day_function"](params, state),
+                new_sectors_pledged_in_bytes,
                 0,
             )
         )
@@ -278,7 +273,8 @@ def p_pledge_sectors(
         new_pledge_due_to_requirements + new_pledge_due_to_random,
         new_pledge_due_to_requirements,
     )
-
+    if state["timestep"] < 2:
+        return {"total_space_pledged": params["initial_space_pledged"]}
     # Update the total space pledged.
     return {"total_space_pledged": new_space_pledged}
 
@@ -297,7 +293,7 @@ def p_storage_fees(
     - https://github.com/subspace/subspace/blob/53dca169379e65b4fb97b5c7753f5d00bded2ef2/crates/pallet-transaction-fees/src/lib.rs#L271
     """
     # Input
-    total_credit_supply: Credits = params["credit_supply_definition"](state)
+    total_credit_supply_in_shannon: Shannon = params["credit_supply_definition"](state)*CREDIT_IN_SHANNONS
     total_space_pledged: Bytes = state["total_space_pledged"]
     blockchain_history_size: Bytes = state["blockchain_history_size"]
     min_replication_factor: float = params["min_replication_factor"]
@@ -321,8 +317,10 @@ def p_storage_fees(
         (total_space_pledged / min_replication_factor) - blockchain_history_size, 1
     )
 
-    storage_fee_in_credits_per_bytes = (
-        total_credit_supply / free_space
+    replication_factor = total_space_pledged/blockchain_history_size
+
+    storage_fee_in_shannon_per_bytes = (
+        total_credit_supply_in_shannon / free_space
     )  # Credits / Bytes
 
     extrinsic_length_in_bytes: Bytes = (
@@ -331,14 +329,14 @@ def p_storage_fees(
 
     # storage_fee(tx) as per spec
     storage_fee_volume: Credits = (
-        storage_fee_in_credits_per_bytes * extrinsic_length_in_bytes
+        storage_fee_in_shannon_per_bytes * (extrinsic_length_in_bytes + bundle_storage)*SHANNON_IN_CREDITS
     )
 
 
     return {
         # Fee Calculation
-        "free_space": free_space,
-        "storage_fee_in_credits_per_bytes": storage_fee_in_credits_per_bytes,
+        "replication_factor": replication_factor,
+        "storage_fee_in_shannon_per_bytes": storage_fee_in_shannon_per_bytes,
         "extrinsic_length_in_bytes": extrinsic_length_in_bytes,
         "storage_fee_volume": storage_fee_volume,
     }
@@ -497,29 +495,33 @@ def p_unvest(
     start_period_fraction = 0.25 * float(state['days_passed'] >= 365)
     linear_period_fraction = 0.75 * min(max((state['days_passed'] - 365), 0) / 3, 1.0)
 
-    investors = 0.2153 * MAX_CREDIT_ISSUANCE * (start_period_fraction + linear_period_fraction)
-    founders = 0.02 * MAX_CREDIT_ISSUANCE * (start_period_fraction + linear_period_fraction)
-    team = 0.05 * MAX_CREDIT_ISSUANCE * (start_period_fraction + linear_period_fraction)
-    advisors = 0.015 * MAX_CREDIT_ISSUANCE * (start_period_fraction + linear_period_fraction)
-    vendors = 0.02 * MAX_CREDIT_ISSUANCE * (start_period_fraction + linear_period_fraction)
-    ambassadors = 0.01 * MAX_CREDIT_ISSUANCE * (start_period_fraction + linear_period_fraction)
+    investors = state["allocated_tokens_investors"] * (start_period_fraction + linear_period_fraction)
+    founders = state["allocated_tokens_founders"] * (start_period_fraction + linear_period_fraction)
+    team = state["allocated_tokens_team"] * (start_period_fraction + linear_period_fraction)
+    advisors = state["allocated_tokens_advisors"] * (start_period_fraction + linear_period_fraction)
+    vendors = state["allocated_tokens_vendors"] * (start_period_fraction + linear_period_fraction)
+    ambassadors = state["allocated_tokens_ambassadors"] * (start_period_fraction + linear_period_fraction)
+    ssl_priv_sale = state["allocated_tokens_ssl_priv_sale"] * (start_period_fraction + linear_period_fraction)
+    foundation_v = (state["allocated_tokens_foundation"] - 0.07 * MAX_CREDIT_ISSUANCE) * (start_period_fraction + linear_period_fraction)
+    subspace_labs_v =(state["allocated_tokens_subspace_labs"] - 0.02 * MAX_CREDIT_ISSUANCE) * (start_period_fraction + linear_period_fraction)
 
     # Liquid at Launch
     testnets = state["allocated_tokens_testnets"]
-    foundation = state["allocated_tokens_foundation"]
-    subspace_labs = state["allocated_tokens_subspace_labs"]
-    ssl_priv_sale = state["allocated_tokens_ssl_priv_sale"]
+    foundation = state["allocated_tokens_foundation"]  - 0.08 * MAX_CREDIT_ISSUANCE
+    subspace_labs = (state["allocated_tokens_subspace_labs"] - 0.05 * MAX_CREDIT_ISSUANCE)
+    
 
 
-    allocated_tokens_new = (investors + founders + team + advisors + vendors + ambassadors + testnets + foundation + subspace_labs + ssl_priv_sale)
+    allocated_tokens_new = (investors + founders + team + advisors + vendors + ambassadors + ssl_priv_sale + foundation_v + subspace_labs_v + 
+                            testnets + foundation + subspace_labs)
 
     tokens_to_allocate = allocated_tokens_new - state['allocated_tokens']
 
     farmers_balance = tokens_to_allocate
-    other_issuance_balance = -1.0 * farmers_balance
+    vesting_balance = -1.0 * farmers_balance
 
     return {
-        "other_issuance_balance": other_issuance_balance,
+        "vesting_balance": vesting_balance,
         "farmers_balance": farmers_balance,
 
         "allocated_tokens": allocated_tokens_new,
@@ -646,16 +648,14 @@ def p_transfers(
 
 def s_reference_subsidy(
     params: SubspaceModelParams, _2, state_history: list, state: SubspaceModelState, _5) -> tuple:
-    """ """
     current_reference_subsidy = 0.0
     for component in params['reference_subsidy_components']:
-        current_reference_subsidy += component(state['blocks_passed'])
+        current_reference_subsidy += component.calculate_subsidy(state['blocks_passed'])
 
     if state['timestep'] > 1:
         avg_ref_subsidy = (current_reference_subsidy + state['reference_subsidy']) / 2
     else:
         avg_ref_subsidy = current_reference_subsidy
-
 
     return ("reference_subsidy", avg_ref_subsidy)
 

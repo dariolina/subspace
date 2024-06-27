@@ -79,8 +79,8 @@ _SUBSPACE_MODEL_BLOCKS: list[dict] = [
         "policies": {"storage_fees": p_storage_fees},
         "variables": {
             # Fee Calculation
-            "free_space": replace_suf,
-            "storage_fee_in_credits_per_bytes": replace_suf,
+            "replication_factor": replace_suf,
+            "storage_fee_in_shannon_per_bytes": replace_suf,
             "extrinsic_length_in_bytes": replace_suf,
             "storage_fee_volume": replace_suf,
         },
@@ -108,7 +108,7 @@ _SUBSPACE_MODEL_BLOCKS: list[dict] = [
         "ignore": False,
         "policies": {"unvest": p_unvest},
         "variables": {
-            "other_issuance_balance": add_suf,
+            "vesting_balance": add_suf,
             "farmers_balance": add_suf,
             "allocated_tokens": replace_suf,
             "allocated_tokens_investors": replace_suf,
